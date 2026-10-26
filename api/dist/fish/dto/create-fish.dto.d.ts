@@ -4,6 +4,7 @@ export declare class CreateFishDto {
     sex: 'male' | 'female' | 'unknown';
     lineName?: string;
     hatchDate?: string;
+    ownerId?: string;
     pondId?: string;
     fatherId?: string;
     motherId?: string;

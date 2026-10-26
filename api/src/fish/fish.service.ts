@@ -281,13 +281,19 @@ export class FishService {
     };
   }
 
-  async findAll() {
-    const { data, error } = await this.supabase.client
+  async findAll(ownerId?: string) {
+    let query = this.supabase.client
       .from('fish')
       .select(
         'id, code, name, sex, line_name, hatch_date, generation, father_id, mother_id, father_label, father_line, mother_label, mother_line, image_path, father_image_path, mother_image_path, created_at',
       )
       .order('created_at', { ascending: false });
+
+    if (ownerId) {
+      query = query.eq('owner_id', ownerId);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       throw new InternalServerErrorException(`Could not load fish: ${error.message}`);
@@ -360,6 +366,7 @@ export class FishService {
     const { data, error } = await this.supabase.client
       .from('fish')
       .insert({
+        owner_id: input.ownerId ?? null,
         code: input.code.trim(),
         name: input.name.trim(),
         sex: input.sex,

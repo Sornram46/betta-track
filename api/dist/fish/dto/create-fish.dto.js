@@ -18,6 +18,7 @@ class CreateFishDto {
     sex;
     lineName;
     hatchDate;
+    ownerId;
     pondId;
     fatherId;
     motherId;
@@ -56,6 +57,11 @@ __decorate([
     (0, class_validator_1.IsDateString)(),
     __metadata("design:type", String)
 ], CreateFishDto.prototype, "hatchDate", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsUUID)(),
+    __metadata("design:type", String)
+], CreateFishDto.prototype, "ownerId", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsUUID)(),

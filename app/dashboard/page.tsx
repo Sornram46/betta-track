@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { LogoutButton } from "@/app/ui/logout-button";
+import { FishRowSkeleton, StatCardSkeleton, StrainRowSkeleton } from "@/app/ui/skeleton";
 
 type FishRecord = {
   id: string;
@@ -91,17 +92,21 @@ export default function DashboardPage() {
 
         <section className="overflow-hidden">
           <div className="-mx-2 flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:grid md:grid-cols-2 md:overflow-visible md:[&::-webkit-scrollbar]:block xl:grid-cols-4">
-            {fishSummary.map((item) => (
-              <div
-                key={item.label}
-                className="min-w-[76%] snap-start rounded-[22px] border border-slate-800 bg-slate-900/80 p-5 sm:min-w-[48%] md:min-w-0"
-              >
-                <p className="text-sm text-slate-400">{item.label}</p>
-                <div className="mt-4 flex items-end justify-between gap-3">
-                  <span className="text-3xl font-bold text-white">{isLoading ? "—" : item.value}</span>
-                </div>
-              </div>
-            ))}
+            {isLoading
+              ? Array.from({ length: 4 }).map((_, index) => <StatCardSkeleton key={index} />)
+              : fishSummary.map((item) => (
+                  <div
+                    key={item.label}
+                    className="group min-w-[76%] snap-start rounded-[22px] border border-slate-800 bg-slate-900/80 p-5 transition hover:border-cyan-500/50 hover:bg-slate-900 sm:min-w-[48%] md:min-w-0"
+                  >
+                    <p className="text-sm text-slate-400">{item.label}</p>
+                    <div className="mt-4 flex items-end justify-between gap-3">
+                      <span className="text-3xl font-bold text-white transition group-hover:text-cyan-300">
+                        {item.value}
+                      </span>
+                    </div>
+                  </div>
+                ))}
           </div>
         </section>
 
@@ -116,13 +121,15 @@ export default function DashboardPage() {
               </Link>
             </div>
 
-            <div className="space-y-3">
-              {isLoading ? <p className="py-6 text-center text-sm text-slate-400" role="status">กำลังโหลดข้อมูลปลา...</p> : null}
+            <div className="space-y-3" role={isLoading ? "status" : undefined} aria-busy={isLoading}>
+              {isLoading
+                ? Array.from({ length: 4 }).map((_, index) => <FishRowSkeleton key={index} />)
+                : null}
               {!isLoading && fish.length === 0 && !errorMessage ? <p className="py-6 text-center text-sm text-slate-400">ยังไม่มีข้อมูลปลา</p> : null}
-              {fish.slice(0, 4).map((item) => (
+              {!isLoading && fish.slice(0, 4).map((item) => (
                 <div
                   key={item.id}
-                  className="flex flex-col gap-3 rounded-2xl border border-slate-800 bg-slate-950/70 p-3 sm:flex-row sm:items-center sm:justify-between"
+                  className="flex flex-col gap-3 rounded-2xl border border-slate-800 bg-slate-950/70 p-3 transition hover:border-cyan-500/40 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div className="flex items-center gap-3">
                     <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-cyan-500/10 text-xs font-bold text-cyan-300">
@@ -148,10 +155,12 @@ export default function DashboardPage() {
               <h2 className="text-lg font-semibold text-white">สายพันธุ์ในระบบ</h2>
               <Link href="/fish" className="text-sm text-cyan-300 hover:text-cyan-200">ดูทั้งหมด</Link>
             </div>
-            <div className="space-y-3">
-              {isLoading ? <p className="py-6 text-center text-sm text-slate-400">กำลังโหลดสายพันธุ์...</p> : null}
+            <div className="space-y-3" role={isLoading ? "status" : undefined} aria-busy={isLoading}>
+              {isLoading
+                ? Array.from({ length: 4 }).map((_, index) => <StrainRowSkeleton key={index} />)
+                : null}
               {!isLoading && strainSummary.length === 0 && !errorMessage ? <p className="py-6 text-center text-sm text-slate-400">ยังไม่มีข้อมูลสายพันธุ์</p> : null}
-              {strainSummary.slice(0, 4).map((strain) => (
+              {!isLoading && strainSummary.slice(0, 4).map((strain) => (
                 <div key={strain.name} className="flex items-center justify-between gap-3 rounded-2xl border border-slate-800 bg-slate-950/70 p-3">
                   <p className="font-medium text-white">{strain.name}</p>
                   <span className="rounded-full border border-slate-700 px-2.5 py-1 text-xs text-slate-300">{strain.count} ตัว</span>

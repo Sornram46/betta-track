@@ -218,11 +218,15 @@ let FishService = class FishService {
                 : { name: fish.mother_label, line: fish.mother_line, age: 'ไม่ระบุ', imageUrl: await this.getSignedImageUrl(fish.mother_image_path) },
         };
     }
-    async findAll() {
-        const { data, error } = await this.supabase.client
+    async findAll(ownerId) {
+        let query = this.supabase.client
             .from('fish')
             .select('id, code, name, sex, line_name, hatch_date, generation, father_id, mother_id, father_label, father_line, mother_label, mother_line, image_path, father_image_path, mother_image_path, created_at')
             .order('created_at', { ascending: false });
+        if (ownerId) {
+            query = query.eq('owner_id', ownerId);
+        }
+        const { data, error } = await query;
         if (error) {
             throw new common_1.InternalServerErrorException(`Could not load fish: ${error.message}`);
         }
@@ -273,6 +277,7 @@ let FishService = class FishService {
         const { data, error } = await this.supabase.client
             .from('fish')
             .insert({
+            owner_id: input.ownerId ?? null,
             code: input.code.trim(),
             name: input.name.trim(),
             sex: input.sex,

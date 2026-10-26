@@ -52,7 +52,7 @@ export declare class FishService {
             code?: undefined;
         };
     }>;
-    findAll(): Promise<{
+    findAll(ownerId?: string): Promise<{
         recordId: string;
         id: string;
         imageUrl: string | null;

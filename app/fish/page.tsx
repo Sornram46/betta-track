@@ -3,6 +3,7 @@
 import Link from "next/link";
 import QRCode from "qrcode";
 import { useEffect, useRef, useState } from "react";
+import { FishCardSkeleton, FishTableRowSkeleton } from "@/app/ui/skeleton";
 
 type FishColor = "cyan" | "amber" | "emerald" | "rose";
 
@@ -326,10 +327,6 @@ export default function FishPage() {
         </header>
 
         <div className="rounded-[22px] border border-slate-800 bg-slate-900/80 p-3 sm:p-4">
-          {isLoading ? (
-            <p className="px-3 py-6 text-center text-sm text-slate-300" role="status">กำลังโหลดข้อมูลปลา...</p>
-          ) : null}
-
           {loadError ? (
             <div className="mb-4 flex flex-col items-start justify-between gap-3 rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 sm:flex-row sm:items-center">
               <p className="text-sm text-rose-200" role="alert">{loadError}</p>
@@ -359,8 +356,11 @@ export default function FishPage() {
                   <th className="px-4 py-3 font-medium">อายุ</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800 text-slate-200">
-                {fishList.map((fish) => (
+              <tbody className="divide-y divide-slate-800 text-slate-200" aria-busy={isLoading}>
+                {isLoading
+                  ? Array.from({ length: 6 }).map((_, index) => <FishTableRowSkeleton key={index} />)
+                  : null}
+                {!isLoading && fishList.map((fish) => (
                   <tr
                     key={fish.id}
                     onClick={() => setSelectedId(fish.id)}
@@ -406,8 +406,11 @@ export default function FishPage() {
             </table>
           </div>
 
-          <div className="grid gap-3 md:hidden">
-            {fishList.map((fish) => (
+          <div className="grid gap-3 md:hidden" aria-busy={isLoading}>
+            {isLoading
+              ? Array.from({ length: 4 }).map((_, index) => <FishCardSkeleton key={index} />)
+              : null}
+            {!isLoading && fishList.map((fish) => (
               <div
                 key={fish.id}
                 onClick={() => setSelectedId(fish.id)}

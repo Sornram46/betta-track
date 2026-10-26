@@ -37,6 +37,10 @@ export class CreateFishDto {
 
   @IsOptional()
   @IsUUID()
+  ownerId?: string;
+
+  @IsOptional()
+  @IsUUID()
   pondId?: string;
 
   @IsOptional()
