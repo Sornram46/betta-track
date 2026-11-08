@@ -44,7 +44,18 @@ export async function login(_previous: LoginState, formData: FormData): Promise<
     return { error: "อีเมลหรือรหัสผ่านไม่ถูกต้อง" };
   }
   if (!response.ok) {
-    return { error: "เข้าสู่ระบบไม่สำเร็จ กรุณาลองใหม่อีกครั้ง" };
+    // Log the backend's reply server-side (visible in Render logs) so failures can be diagnosed.
+    // Never log the submitted password.
+    const detail = await response.text().catch(() => "");
+    console.error(`[login] backend responded ${response.status} for ${apiUrl}/auth/login: ${detail.slice(0, 500)}`);
+
+    if (response.status === 404) {
+      return { error: "ไม่พบระบบยืนยันตัวตนบน API (404) ตรวจสอบว่า backend deploy เวอร์ชันล่าสุดแล้ว" };
+    }
+    if (response.status >= 500) {
+      return { error: `API ขัดข้อง (${response.status}) กรุณาลองใหม่อีกครั้ง หรือตรวจสอบ log ของ backend` };
+    }
+    return { error: `เข้าสู่ระบบไม่สำเร็จ (${response.status}) กรุณาลองใหม่อีกครั้ง` };
   }
 
   (await cookies()).set(SESSION_COOKIE, await createSessionToken(sessionSecret), {
