@@ -11,7 +11,8 @@ import { hashPassword, verifyPassword } from './password';
 
 interface UserRow {
   id: string;
-  email: string;
+  username: string;
+  email: string | null;
   password_hash: string;
   display_name: string | null;
   role: 'owner' | 'member';
@@ -19,13 +20,16 @@ interface UserRow {
 
 export interface AuthenticatedUser {
   id: string;
-  email: string;
+  username: string;
+  email: string | null;
   displayName: string | null;
   role: 'owner' | 'member';
 }
 
-function normalizeEmail(email: string): string {
-  return email.trim().toLowerCase();
+const USERNAME_PATTERN = /^[a-z0-9._-]{3,30}$/;
+
+function normalizeUsername(username: string): string {
+  return username.trim().toLowerCase();
 }
 
 @Injectable()
@@ -35,19 +39,25 @@ export class AuthService implements OnModuleInit {
   constructor(private readonly supabase: SupabaseService) {}
 
   /**
-   * On startup, make sure the owner account from env exists so login keeps
-   * working after switching from env-based auth to the users table.
+   * On startup, create the owner account from OWNER_USERNAME/OWNER_PASSWORD if it
+   * doesn't exist yet. Optional: skipped when the env vars are not set.
    */
   async onModuleInit(): Promise<void> {
-    const email = process.env.OWNER_EMAIL;
+    const username = process.env.OWNER_USERNAME;
     const password = process.env.OWNER_PASSWORD;
-    if (!email || !password) {
-      this.logger.warn('OWNER_EMAIL/OWNER_PASSWORD not set; skipping owner seed.');
+    if (!username || !password) {
+      this.logger.warn('OWNER_USERNAME/OWNER_PASSWORD not set; skipping owner seed.');
+      return;
+    }
+
+    const normalized = normalizeUsername(username);
+    if (!USERNAME_PATTERN.test(normalized)) {
+      this.logger.warn('OWNER_USERNAME must be 3-30 chars of a-z, 0-9, ".", "_" or "-"; skipping owner seed.');
       return;
     }
 
     try {
-      await this.seedOwner(normalizeEmail(email), password, 'เจ้าของฟาร์ม');
+      await this.seedOwner(normalized, password, 'เจ้าของฟาร์ม');
     } catch (error) {
       // Don't crash the app if the DB isn't reachable yet; just log it.
       this.logger.warn(
@@ -56,11 +66,11 @@ export class AuthService implements OnModuleInit {
     }
   }
 
-  private async findByEmail(email: string): Promise<UserRow | null> {
+  private async findByUsername(username: string): Promise<UserRow | null> {
     const { data, error } = await this.supabase.client
       .from('users')
-      .select('id, email, password_hash, display_name, role')
-      .eq('email', email)
+      .select('id, username, email, password_hash, display_name, role')
+      .eq('username', username)
       .maybeSingle();
 
     if (error) {
@@ -70,13 +80,13 @@ export class AuthService implements OnModuleInit {
   }
 
   /** Create the owner account if it doesn't exist yet. Idempotent. */
-  async seedOwner(email: string, password: string, displayName: string): Promise<void> {
-    const existing = await this.findByEmail(email);
+  async seedOwner(username: string, password: string, displayName: string): Promise<void> {
+    const existing = await this.findByUsername(username);
     if (existing) return;
 
     const passwordHash = await hashPassword(password);
     const { error } = await this.supabase.client.from('users').insert({
-      email,
+      username,
       password_hash: passwordHash,
       display_name: displayName,
       role: 'owner',
@@ -87,12 +97,13 @@ export class AuthService implements OnModuleInit {
       if (error.code === '23505') return;
       throw new InternalServerErrorException(`Could not seed owner: ${error.message}`);
     }
-    this.logger.log(`Seeded owner user: ${email}`);
+    this.logger.log(`Seeded owner user: ${username}`);
   }
 
   async validateCredentials(input: LoginDto): Promise<AuthenticatedUser> {
-    const email = normalizeEmail(input.email);
-    const user = await this.findByEmail(email);
+    const username = normalizeUsername(input.username);
+    // Skip the DB lookup for usernames that can't exist.
+    const user = USERNAME_PATTERN.test(username) ? await this.findByUsername(username) : null;
 
     // Run a hash even when the user is missing to keep timing roughly constant.
     const isValid = user
@@ -100,11 +111,12 @@ export class AuthService implements OnModuleInit {
       : await verifyPassword(input.password, 'scrypt$00$00').then(() => false);
 
     if (!user || !isValid) {
-      throw new UnauthorizedException('อีเมลหรือรหัสผ่านไม่ถูกต้อง');
+      throw new UnauthorizedException('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
     }
 
     return {
       id: user.id,
+      username: user.username,
       email: user.email,
       displayName: user.display_name,
       role: user.role,

@@ -12,8 +12,19 @@ export function LoginForm() {
   return (
     <form action={formAction} className="space-y-5">
       <div>
-        <label htmlFor="email" className="mb-2 block text-sm font-medium text-slate-200">อีเมล</label>
-        <input id="email" name="email" type="email" autoComplete="username" required className={inputClassName} />
+        <label htmlFor="username" className="mb-2 block text-sm font-medium text-slate-200">ชื่อผู้ใช้</label>
+        <input
+          id="username"
+          name="username"
+          type="text"
+          autoComplete="username"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          maxLength={30}
+          required
+          className={inputClassName}
+        />
       </div>
 
       <div>

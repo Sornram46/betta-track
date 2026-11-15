@@ -18,11 +18,11 @@ export async function login(_previous: LoginState, formData: FormData): Promise<
     return { error: "ยังไม่ได้ตั้งค่า BETTA_API_URL และ BETTA_API_ACCESS_TOKEN ใน .env.local" };
   }
 
-  const email = formData.get("email")?.toString().trim().toLowerCase() ?? "";
+  const username = formData.get("username")?.toString().trim().toLowerCase() ?? "";
   const password = formData.get("password")?.toString() ?? "";
 
-  if (!email || !password) {
-    return { error: "กรุณากรอกอีเมลและรหัสผ่าน" };
+  if (!username || !password) {
+    return { error: "กรุณากรอกชื่อผู้ใช้และรหัสผ่าน" };
   }
 
   let response: Response;
@@ -33,7 +33,7 @@ export async function login(_previous: LoginState, formData: FormData): Promise<
         Authorization: `Bearer ${accessToken}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ username, password }),
       cache: "no-store",
     });
   } catch {
@@ -41,13 +41,26 @@ export async function login(_previous: LoginState, formData: FormData): Promise<
   }
 
   if (response.status === 401) {
-    return { error: "อีเมลหรือรหัสผ่านไม่ถูกต้อง" };
+    return { error: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง" };
   }
   if (!response.ok) {
     // Log the backend's reply server-side (visible in Render logs) so failures can be diagnosed.
     // Never log the submitted password.
     const detail = await response.text().catch(() => "");
-    console.error(`[login] backend responded ${response.status} for ${apiUrl}/auth/login: ${detail.slice(0, 500)}`);
+    // `server`, `retry-after` and `x-render-routing` headers show which layer (Render edge, Cloudflare, NestJS) replied.
+    const headerInfo = ["server", "retry-after", "x-render-routing", "cf-ray"]
+      .map((name) => `${name}=${response.headers.get(name) ?? "-"}`)
+      .join(" ");
+    console.error(
+      `[login] backend responded ${response.status} for ${apiUrl}/auth/login [${headerInfo}]: ${detail.slice(0, 500)}`,
+    );
+
+    if (response.status === 429) {
+      const retryAfter = response.headers.get("retry-after");
+      return {
+        error: `มีการเรียกระบบถี่เกินไป (429) กรุณารอ${retryAfter ? ` ${retryAfter} วินาที` : "สักครู่"}แล้วลองใหม่`,
+      };
+    }
 
     if (response.status === 404) {
       return { error: "ไม่พบระบบยืนยันตัวตนบน API (404) ตรวจสอบว่า backend deploy เวอร์ชันล่าสุดแล้ว" };

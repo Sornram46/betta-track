@@ -14,8 +14,9 @@ exports.AuthService = void 0;
 const common_1 = require("@nestjs/common");
 const supabase_service_1 = require("../supabase/supabase.service");
 const password_1 = require("./password");
-function normalizeEmail(email) {
-    return email.trim().toLowerCase();
+const USERNAME_PATTERN = /^[a-z0-9._-]{3,30}$/;
+function normalizeUsername(username) {
+    return username.trim().toLowerCase();
 }
 let AuthService = AuthService_1 = class AuthService {
     supabase;
@@ -24,37 +25,42 @@ let AuthService = AuthService_1 = class AuthService {
         this.supabase = supabase;
     }
     async onModuleInit() {
-        const email = process.env.OWNER_EMAIL;
+        const username = process.env.OWNER_USERNAME;
         const password = process.env.OWNER_PASSWORD;
-        if (!email || !password) {
-            this.logger.warn('OWNER_EMAIL/OWNER_PASSWORD not set; skipping owner seed.');
+        if (!username || !password) {
+            this.logger.warn('OWNER_USERNAME/OWNER_PASSWORD not set; skipping owner seed.');
+            return;
+        }
+        const normalized = normalizeUsername(username);
+        if (!USERNAME_PATTERN.test(normalized)) {
+            this.logger.warn('OWNER_USERNAME must be 3-30 chars of a-z, 0-9, ".", "_" or "-"; skipping owner seed.');
             return;
         }
         try {
-            await this.seedOwner(normalizeEmail(email), password, 'เจ้าของฟาร์ม');
+            await this.seedOwner(normalized, password, 'เจ้าของฟาร์ม');
         }
         catch (error) {
             this.logger.warn(`Could not seed owner user: ${error instanceof Error ? error.message : String(error)}`);
         }
     }
-    async findByEmail(email) {
+    async findByUsername(username) {
         const { data, error } = await this.supabase.client
             .from('users')
-            .select('id, email, password_hash, display_name, role')
-            .eq('email', email)
+            .select('id, username, email, password_hash, display_name, role')
+            .eq('username', username)
             .maybeSingle();
         if (error) {
             throw new common_1.InternalServerErrorException(`Could not load user: ${error.message}`);
         }
         return data ?? null;
     }
-    async seedOwner(email, password, displayName) {
-        const existing = await this.findByEmail(email);
+    async seedOwner(username, password, displayName) {
+        const existing = await this.findByUsername(username);
         if (existing)
             return;
         const passwordHash = await (0, password_1.hashPassword)(password);
         const { error } = await this.supabase.client.from('users').insert({
-            email,
+            username,
             password_hash: passwordHash,
             display_name: displayName,
             role: 'owner',
@@ -64,19 +70,20 @@ let AuthService = AuthService_1 = class AuthService {
                 return;
             throw new common_1.InternalServerErrorException(`Could not seed owner: ${error.message}`);
         }
-        this.logger.log(`Seeded owner user: ${email}`);
+        this.logger.log(`Seeded owner user: ${username}`);
     }
     async validateCredentials(input) {
-        const email = normalizeEmail(input.email);
-        const user = await this.findByEmail(email);
+        const username = normalizeUsername(input.username);
+        const user = USERNAME_PATTERN.test(username) ? await this.findByUsername(username) : null;
         const isValid = user
             ? await (0, password_1.verifyPassword)(input.password, user.password_hash)
             : await (0, password_1.verifyPassword)(input.password, 'scrypt$00$00').then(() => false);
         if (!user || !isValid) {
-            throw new common_1.UnauthorizedException('อีเมลหรือรหัสผ่านไม่ถูกต้อง');
+            throw new common_1.UnauthorizedException('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
         }
         return {
             id: user.id,
+            username: user.username,
             email: user.email,
             displayName: user.display_name,
             role: user.role,
