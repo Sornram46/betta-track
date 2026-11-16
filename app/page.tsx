@@ -1,25 +1,25 @@
 import Link from "next/link";
 
-const features = [
-  {
-    title: "ทะเบียนปลาเวอร์ชันจริงจัง",
-    text: "บันทึกข้อมูลทุกตัวอย่างละเอียด ทั้งสายพันธุ์ เพศ ประวัติการเจริญเติบโต และภาพถ่ายบันทึก" ,
-  },
-  {
-    title: "ติดตามพ่อแม่พันธุ์ได้ชัดเจน",
-    text: "ลดความสับสนเรื่องสายเลือดและปัญหาการจำพ่อแม่พันธุ์ไม่ได้ด้วยข้อมูลที่เชื่อมโยงกันแบบครบวงจร",
-  },
-  {
-    title: "ผสมพันธุ์และฟักไข่แบบมีประวัติ",
-    text: "ดูคู่ผสมทุกครั้ง ผลลัพธ์ และสถานะการฟักแบบเรียลไทม์ในหน้าเดียว",
-  },
-];
+// const features = [
+//   {
+//     title: "ทะเบียนปลาเวอร์ชันจริงจัง",
+//     text: "บันทึกข้อมูลทุกตัวอย่างละเอียด ทั้งสายพันธุ์ เพศ ประวัติการเจริญเติบโต และภาพถ่ายบันทึก" ,
+//   },
+//   {
+//     title: "ติดตามพ่อแม่พันธุ์ได้ชัดเจน",
+//     text: "ลดความสับสนเรื่องสายเลือดและปัญหาการจำพ่อแม่พันธุ์ไม่ได้ด้วยข้อมูลที่เชื่อมโยงกันแบบครบวงจร",
+//   },
+//   {
+//     title: "ผสมพันธุ์และฟักไข่แบบมีประวัติ",
+//     text: "ดูคู่ผสมทุกครั้ง ผลลัพธ์ และสถานะการฟักแบบเรียลไทม์ในหน้าเดียว",
+//   },
+// ];
 
-const stats = [
-  { label: "ปลาทั้งหมดในระบบ", value: "248" },
-  { label: "คู่ผสมที่บันทึก", value: "67" },
-  { label: "สายพันธุ์ที่มีอยู่", value: "18" },
-];
+// const stats = [
+//   { label: "ปลาทั้งหมดในระบบ", value: "248" },
+//   { label: "คู่ผสมที่บันทึก", value: "67" },
+//   { label: "สายพันธุ์ที่มีอยู่", value: "18" },
+// ];
 
 export default function Home() {
   return (
@@ -75,7 +75,7 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="rounded-[28px] border border-slate-800 bg-slate-950/70 p-4 sm:p-5">
+          {/* <div className="rounded-[28px] border border-slate-800 bg-slate-950/70 p-4 sm:p-5">
             <div className="rounded-[22px] border border-slate-800 bg-gradient-to-br from-cyan-500/10 via-slate-900 to-slate-950 p-5">
               <div className="flex items-center justify-between border-b border-slate-800 pb-4">
                 <div>
@@ -102,9 +102,9 @@ export default function Home() {
                 </div>
               </div>
             </div>
-          </div>
+          </div> */}
         </section>
-
+{/* 
         <section className="mt-10 grid gap-4 md:grid-cols-3">
           {stats.map((stat) => (
             <div key={stat.label} className="rounded-2xl border border-slate-800 bg-slate-900/70 p-5">
@@ -124,7 +124,7 @@ export default function Home() {
               <p className="mt-3 text-sm leading-6 text-slate-300">{feature.text}</p>
             </div>
           ))}
-        </section>
+        </section> */}
       </div>
     </main>
   );
