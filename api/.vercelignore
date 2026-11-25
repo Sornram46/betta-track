@@ -1,0 +1,3 @@
+# Backend (NestJS) project. This file must exist so Vercel does not fall back to
+# the root .vercelignore, which excludes /api for the frontend project.
+.env
