@@ -1,9 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { SESSION_COOKIE, verifySessionToken } from "@/lib/session";
+import { isAdmin, readSessionToken, SESSION_COOKIE } from "@/lib/session";
 
 const PUBLIC_EXACT = new Set(["/", "/login"]);
 // QR scan pages must stay readable without an account.
 const PUBLIC_PREFIXES = ["/fish/qr/", "/api/fish/qr/"];
+// Pages only an admin (owner) may open. The API routes check the role themselves.
+const ADMIN_PAGE_PATTERN = /^\/fish\/[^/]+\/edit\/?$/;
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -12,9 +14,11 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const secret = process.env.SESSION_SECRET;
-  const token = request.cookies.get(SESSION_COOKIE)?.value;
-  if (secret && token && (await verifySessionToken(token, secret))) {
+  const session = await readSessionToken(request.cookies.get(SESSION_COOKIE)?.value, process.env.SESSION_SECRET);
+  if (session) {
+    if (ADMIN_PAGE_PATTERN.test(pathname) && !isAdmin(session)) {
+      return NextResponse.redirect(new URL("/fish", request.url));
+    }
     return NextResponse.next();
   }
 

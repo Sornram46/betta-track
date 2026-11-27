@@ -2,9 +2,11 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   ParseUUIDPipe,
+  Patch,
   Post,
   Query,
   UploadedFile,
@@ -35,6 +37,22 @@ export class FishController {
   @Post()
   create(@Body() createFishDto: CreateFishDto) {
     return this.fishService.create(createFishDto);
+  }
+
+  @Get(':id')
+  findOne(@Param('id', new ParseUUIDPipe()) id: string) {
+    return this.fishService.findOne(id);
+  }
+
+  // Admin-only: the Next.js app checks the user's role before forwarding these.
+  @Patch(':id')
+  update(@Param('id', new ParseUUIDPipe()) id: string, @Body() updateFishDto: CreateFishDto) {
+    return this.fishService.update(id, updateFishDto);
+  }
+
+  @Delete(':id')
+  remove(@Param('id', new ParseUUIDPipe()) id: string) {
+    return this.fishService.remove(id);
   }
 
   @Post(':id/image')

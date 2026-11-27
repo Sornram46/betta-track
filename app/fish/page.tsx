@@ -210,6 +210,9 @@ export default function FishPage() {
   const [qrError, setQrError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [relationshipView, setRelationshipView] = useState<"detail" | "tree">("detail");
   const [selectedLineage, setSelectedLineage] = useState<{
     label: string;
@@ -254,7 +257,49 @@ export default function FishPage() {
     };
   }, [reloadKey]);
 
+  useEffect(() => {
+    let isCurrent = true;
+    fetch("/api/auth/me", { cache: "no-store" })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((me: unknown) => {
+        if (isCurrent && typeof me === "object" && me !== null && "isAdmin" in me) {
+          setIsAdmin(me.isAdmin === true);
+        }
+      })
+      .catch(() => {
+        // Buttons stay hidden; the API still enforces the role.
+      });
+    return () => {
+      isCurrent = false;
+    };
+  }, []);
+
   const selectedFish = fishList.find((fish) => fish.id === selectedId) ?? null;
+
+  async function handleDelete(fish: FishRecord) {
+    const confirmed = window.confirm(
+      `ลบ "${fish.name}" (${fish.id}) ออกจากทะเบียน?\n\nลบแล้วกู้คืนไม่ได้ ถ้าปลาตัวนี้เป็นพ่อหรือแม่ของปลาตัวอื่น ระบบจะเก็บรหัสไว้ในข้อมูลของลูกปลา`,
+    );
+    if (!confirmed) return;
+
+    setIsDeleting(true);
+    setDeleteError(null);
+    try {
+      const response = await fetch(`/api/fish/${encodeURIComponent(fish.recordId)}`, { method: "DELETE" });
+      if (!response.ok) {
+        const result: unknown = await response.json().catch(() => null);
+        const message =
+          typeof result === "object" && result !== null && "message" in result ? String(result.message) : null;
+        throw new Error(message ?? `ลบไม่สำเร็จ (${response.status})`);
+      }
+      setSelectedId(null);
+      setReloadKey((key) => key + 1);
+    } catch (error) {
+      setDeleteError(error instanceof Error ? error.message : "ลบไม่สำเร็จ");
+    } finally {
+      setIsDeleting(false);
+    }
+  }
 
   useEffect(() => {
     if (!selectedFish) {
@@ -266,6 +311,7 @@ export default function FishPage() {
     let isCurrent = true;
     setQrImage(null);
     setQrError(null);
+    setDeleteError(null);
     const scanUrl = `${window.location.origin}/fish/qr/${encodeURIComponent(selectedFish.recordId)}`;
 
     QRCode.toDataURL(scanUrl, { errorCorrectionLevel: "H", margin: 2, width: 360 })
@@ -475,14 +521,39 @@ export default function FishPage() {
                       <p className="text-[11px] uppercase tracking-[0.2em] text-cyan-300">สายพันธุ์</p>
                       <h2 className="mt-2 text-xl font-semibold text-white">{selectedFish.name}</h2>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedId(null)}
-                      className="rounded-full border border-slate-700 px-3 py-1.5 text-sm text-slate-200 transition hover:border-cyan-500 hover:text-cyan-300"
-                    >
-                      ปิด
-                    </button>
+                    <div className="flex shrink-0 items-center gap-2">
+                      {isAdmin ? (
+                        <>
+                          <Link
+                            href={`/fish/${encodeURIComponent(selectedFish.recordId)}/edit`}
+                            className="rounded-full border border-cyan-500/50 px-3 py-1.5 text-sm text-cyan-300 transition hover:bg-cyan-500/10"
+                          >
+                            แก้ไข
+                          </Link>
+                          <button
+                            type="button"
+                            onClick={() => void handleDelete(selectedFish)}
+                            disabled={isDeleting}
+                            className="rounded-full border border-rose-500/50 px-3 py-1.5 text-sm text-rose-300 transition hover:bg-rose-500/10 disabled:opacity-60"
+                          >
+                            {isDeleting ? "กำลังลบ..." : "ลบ"}
+                          </button>
+                        </>
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={() => setSelectedId(null)}
+                        className="rounded-full border border-slate-700 px-3 py-1.5 text-sm text-slate-200 transition hover:border-cyan-500 hover:text-cyan-300"
+                      >
+                        ปิด
+                      </button>
+                    </div>
                   </div>
+                  {deleteError ? (
+                    <p className="mx-5 mt-4 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-sm text-rose-200" role="alert">
+                      {deleteError}
+                    </p>
+                  ) : null}
 
                   <div className="p-5">
                     <div className="mb-4 flex items-center justify-between gap-3 rounded-2xl border border-slate-800 bg-slate-950/70 p-3">

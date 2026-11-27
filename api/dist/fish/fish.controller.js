@@ -29,6 +29,15 @@ let FishController = class FishController {
     create(createFishDto) {
         return this.fishService.create(createFishDto);
     }
+    findOne(id) {
+        return this.fishService.findOne(id);
+    }
+    update(id, updateFishDto) {
+        return this.fishService.update(id, updateFishDto);
+    }
+    remove(id) {
+        return this.fishService.remove(id);
+    }
     uploadImage(id, image, role) {
         if (role && !['fish', 'father', 'mother'].includes(role)) {
             throw new common_1.BadRequestException('ประเภทภาพไม่ถูกต้อง');
@@ -50,6 +59,28 @@ __decorate([
     __metadata("design:paramtypes", [create_fish_dto_1.CreateFishDto]),
     __metadata("design:returntype", void 0)
 ], FishController.prototype, "create", null);
+__decorate([
+    (0, common_1.Get)(':id'),
+    __param(0, (0, common_1.Param)('id', new common_1.ParseUUIDPipe())),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], FishController.prototype, "findOne", null);
+__decorate([
+    (0, common_1.Patch)(':id'),
+    __param(0, (0, common_1.Param)('id', new common_1.ParseUUIDPipe())),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, create_fish_dto_1.CreateFishDto]),
+    __metadata("design:returntype", void 0)
+], FishController.prototype, "update", null);
+__decorate([
+    (0, common_1.Delete)(':id'),
+    __param(0, (0, common_1.Param)('id', new common_1.ParseUUIDPipe())),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], FishController.prototype, "remove", null);
 __decorate([
     (0, common_1.Post)(':id/image'),
     (0, common_1.UseInterceptors)((0, platform_express_1.FileInterceptor)('image', {

@@ -271,6 +271,91 @@ let FishService = class FishService {
             };
         });
     }
+    async findOne(id) {
+        const { data, error } = await this.supabase.client
+            .from('fish')
+            .select('id, code, name, sex, line_name, hatch_date, generation, father_id, mother_id, father_label, father_line, mother_label, mother_line, notes, image_path, father_image_path, mother_image_path')
+            .eq('id', id)
+            .maybeSingle();
+        if (error) {
+            throw new common_1.InternalServerErrorException(`Could not load fish: ${error.message}`);
+        }
+        if (!data)
+            throw new common_1.NotFoundException('ไม่พบข้อมูลปลานี้');
+        const { image_path, father_image_path, mother_image_path, ...fields } = data;
+        const [imageUrl, fatherImageUrl, motherImageUrl] = await Promise.all([
+            this.getSignedImageUrl(image_path),
+            this.getSignedImageUrl(father_image_path),
+            this.getSignedImageUrl(mother_image_path),
+        ]);
+        return { ...fields, imageUrl, fatherImageUrl, motherImageUrl };
+    }
+    async update(id, input) {
+        if (input.fatherId === id || input.motherId === id) {
+            throw new common_1.BadRequestException('ไม่สามารถเลือกปลาตัวนี้เป็นพ่อหรือแม่ของตัวเองได้');
+        }
+        await this.validateParent(input.fatherId, 'male');
+        await this.validateParent(input.motherId, 'female');
+        const { data, error } = await this.supabase.client
+            .from('fish')
+            .update({
+            code: input.code.trim(),
+            name: input.name.trim(),
+            sex: input.sex,
+            line_name: input.lineName?.trim() || null,
+            hatch_date: input.hatchDate ?? null,
+            father_id: input.fatherId ?? null,
+            mother_id: input.motherId ?? null,
+            father_label: input.fatherId ? null : input.fatherLabel?.trim() || null,
+            father_line: input.fatherId ? null : input.fatherLine?.trim() || null,
+            mother_label: input.motherId ? null : input.motherLabel?.trim() || null,
+            mother_line: input.motherId ? null : input.motherLine?.trim() || null,
+            generation: input.generation ?? null,
+            notes: input.notes?.trim() || null,
+        })
+            .eq('id', id)
+            .select('id, code, name')
+            .maybeSingle();
+        if (error) {
+            if (error.code === '23505')
+                throw new common_1.ConflictException('รหัสปลานี้มีอยู่ในทะเบียนแล้ว');
+            throw new common_1.InternalServerErrorException(`Could not update fish: ${error.message}`);
+        }
+        if (!data)
+            throw new common_1.NotFoundException('ไม่พบข้อมูลปลานี้');
+        return data;
+    }
+    async remove(id) {
+        const { data: fish, error: loadError } = await this.supabase.client
+            .from('fish')
+            .select('id, code, line_name, image_path, father_image_path, mother_image_path')
+            .eq('id', id)
+            .maybeSingle();
+        if (loadError) {
+            throw new common_1.InternalServerErrorException(`Could not load fish: ${loadError.message}`);
+        }
+        if (!fish)
+            throw new common_1.NotFoundException('ไม่พบข้อมูลปลานี้');
+        for (const role of ['father', 'mother']) {
+            const { error } = await this.supabase.client
+                .from('fish')
+                .update({ [`${role}_id`]: null, [`${role}_label`]: fish.code, [`${role}_line`]: fish.line_name })
+                .eq(`${role}_id`, id);
+            if (error) {
+                throw new common_1.InternalServerErrorException(`Could not keep children lineage: ${error.message}`);
+            }
+        }
+        const { error: deleteError } = await this.supabase.client.from('fish').delete().eq('id', id);
+        if (deleteError) {
+            throw new common_1.InternalServerErrorException(`Could not delete fish: ${deleteError.message}`);
+        }
+        const imagePaths = [fish.image_path, fish.father_image_path, fish.mother_image_path]
+            .filter((path) => Boolean(path));
+        if (imagePaths.length > 0) {
+            await this.supabase.client.storage.from(FISH_IMAGE_BUCKET).remove(imagePaths);
+        }
+        return { id, deleted: true };
+    }
     async create(input) {
         await this.validateParent(input.fatherId, 'male');
         await this.validateParent(input.motherId, 'female');

@@ -71,7 +71,27 @@ export async function login(_previous: LoginState, formData: FormData): Promise<
     return { error: `เข้าสู่ระบบไม่สำเร็จ (${response.status}) กรุณาลองใหม่อีกครั้ง` };
   }
 
-  (await cookies()).set(SESSION_COOKIE, await createSessionToken(sessionSecret), {
+  const result: unknown = await response.json().catch(() => null);
+  const user =
+    typeof result === "object" && result !== null && "user" in result && typeof result.user === "object"
+      ? (result.user as { id?: unknown; username?: unknown; role?: unknown } | null)
+      : null;
+  if (
+    !user ||
+    typeof user.id !== "string" ||
+    typeof user.username !== "string" ||
+    (user.role !== "owner" && user.role !== "member")
+  ) {
+    console.error("[login] backend returned 200 without a valid user object");
+    return { error: "ระบบยืนยันตัวตนตอบกลับไม่ถูกต้อง กรุณาตรวจสอบว่า backend deploy เวอร์ชันล่าสุดแล้ว" };
+  }
+
+  const sessionToken = await createSessionToken(sessionSecret, {
+    id: user.id,
+    username: user.username,
+    role: user.role,
+  });
+  (await cookies()).set(SESSION_COOKIE, sessionToken, {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
